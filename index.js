@@ -31,6 +31,17 @@ const selfCoverageHelper = global[nycSelfCoverageHelper] || {
   onExit () {}
 }
 
+// Retrieve the total number of CPU cores available on the current device.
+// The value might be 0 (zero) if the device lacks sufficient permissions
+// to access CPU information, which can occur on environments like Termux
+// running on an unrooted Android device. In such cases, `os.cpus()` returns
+// an empty array, resulting in a length of zero.
+//
+// As a fallback, the code defaults to 1 CPU core if the length is zero,
+// ensuring that the application can still proceed with a reasonable assumption
+// for the available processing power.
+const TOTAL_CPU = os.cpus().length || 1
+
 function coverageFinder () {
   var coverage = global.__coverage__
   if (typeof __coverage__ === 'object') coverage = __coverage__
@@ -238,7 +249,7 @@ class NYC {
 
       const filesToInstrument = await this.exclude.glob(input)
 
-      const concurrency = output ? os.cpus().length : 1
+      const concurrency = output ? TOTAL_CPU : 1
       if (this.config.completeCopy && output) {
         const files = await glob(path.resolve(input, '**'), {
           dot: true,
@@ -427,7 +438,7 @@ class NYC {
         const report = await this.coverageFileLoad(f, baseDirectory)
         map.merge(report)
       },
-      { concurrency: os.cpus().length }
+      { concurrency: TOTAL_CPU }
     )
 
     map.data = await this.sourceMaps.remapCoverage(map.data)
@@ -525,7 +536,7 @@ class NYC {
     return pMap(
       files,
       f => this.coverageFileLoad(f, baseDirectory),
-      { concurrency: os.cpus().length }
+      { concurrency: TOTAL_CPU }
     )
   }
 
